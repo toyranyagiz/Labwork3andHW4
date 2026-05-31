@@ -21,6 +21,8 @@ ATileGameManager::ATileGameManager()
 	MapExtendsInGrids = 25;
 
 	CurrentTileIndex = 0;
+	CurrentYaw = 0.0f;
+	LastGridLocation = FVector::ZeroVector;
 
 	for (int32 X = 0; X < MAX_GRID_SIZE; X++)
 	{
@@ -37,6 +39,13 @@ ATileGameManager::ATileGameManager()
 	GridSelection->SetupAttachment(SceneRoot);
 	GridSelection->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GridSelection->SetMobility(EComponentMobility::Movable);
+
+	SelectedTilePreview = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SelectedTilePreview"));
+	SelectedTilePreview->SetupAttachment(SceneRoot);
+	SelectedTilePreview->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SelectedTilePreview->SetMobility(EComponentMobility::Movable);
+	SelectedTilePreview->SetVisibility(false);
+	SelectedTilePreview->CastShadow = false;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> PlaneMesh(TEXT("/Engine/BasicShapes/Plane.Plane"));
 
@@ -82,13 +91,18 @@ void ATileGameManager::OnActorInteraction(AActor* HitActor, FVector Location, bo
 	GridLocation.Y = FMath::GridSnap(Location.Y, static_cast<float>(GridSize));
 	GridLocation.Z = 0.0f;
 
+	LastGridLocation = GridLocation;
+
 	if (GridSelection)
 	{
 		GridSelection->SetWorldLocation(GridLocation + GridOffset);
+		GridSelection->SetWorldRotation(FRotator::ZeroRotator);
 
 		float SelectionScale = GridSize / 100.0f;
 		GridSelection->SetWorldScale3D(FVector(SelectionScale, SelectionScale, 1.0f));
 	}
+
+	UpdateSelectedTilePreview(GridLocation);
 
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 
@@ -99,7 +113,22 @@ void ATileGameManager::OnActorInteraction(AActor* HitActor, FVector Location, bo
 
 	if (PlayerController->WasInputKeyJustPressed(EKeys::MouseScrollDown))
 	{
-		CycleTileForward();
+		CycleTile(1);
+		UpdateSelectedTilePreview(GridLocation);
+		return;
+	}
+
+	if (PlayerController->WasInputKeyJustPressed(EKeys::MouseScrollUp))
+	{
+		CycleTile(-1);
+		UpdateSelectedTilePreview(GridLocation);
+		return;
+	}
+
+	if (PlayerController->WasInputKeyJustPressed(EKeys::RightMouseButton))
+	{
+		RotateSelectedTile();
+		UpdateSelectedTilePreview(GridLocation);
 		return;
 	}
 
@@ -132,10 +161,13 @@ void ATileGameManager::OnActorInteraction(AActor* HitActor, FVector Location, bo
 			return;
 		}
 
+		FVector TileScale = SelectedTile->InstancedMesh->GetRelativeScale3D();
+		FVector TileOffset = SelectedTile->InstancedMesh->GetRelativeLocation();
+
 		FTransform TileTransform(
-			FRotator(0.0f, 0.0f, 0.0f),
-			GridLocation,
-			FVector(1.0f, 1.0f, 1.0f)
+			FRotator(0.0f, CurrentYaw, 0.0f),
+			GridLocation + TileOffset,
+			TileScale
 		);
 
 		SelectedTile->InstancedMesh->AddInstance(TileTransform, true);
@@ -145,30 +177,98 @@ void ATileGameManager::OnActorInteraction(AActor* HitActor, FVector Location, bo
 		UE_LOG(
 			LogTemp,
 			Warning,
-			TEXT("Tile placed at X: %f, Y: %f, Z: %f | Tile Index: %d"),
+			TEXT("Tile placed at X: %f, Y: %f, Z: %f | Tile Index: %d | Rotation Yaw: %f"),
 			GridLocation.X,
 			GridLocation.Y,
 			GridLocation.Z,
-			CurrentTileIndex
+			CurrentTileIndex,
+			CurrentYaw
 		);
 	}
 }
 
-void ATileGameManager::CycleTileForward()
+void ATileGameManager::UpdateSelectedTilePreview(const FVector& GridLocation)
+{
+	if (!SelectedTilePreview)
+	{
+		return;
+	}
+
+	if (TileTypes.Num() == 0)
+	{
+		SelectedTilePreview->SetVisibility(false);
+		return;
+	}
+
+	if (!TileTypes.IsValidIndex(CurrentTileIndex))
+	{
+		CurrentTileIndex = 0;
+	}
+
+	ATileBase* SelectedTile = TileTypes[CurrentTileIndex];
+
+	if (!SelectedTile || !SelectedTile->BaseMesh)
+	{
+		SelectedTilePreview->SetVisibility(false);
+		return;
+	}
+
+	SelectedTilePreview->SetStaticMesh(SelectedTile->BaseMesh);
+
+	if (SelectedTile->BaseMaterial)
+	{
+		SelectedTilePreview->SetMaterial(0, SelectedTile->BaseMaterial);
+	}
+
+	FVector TileScale = FVector(1.0f, 1.0f, 1.0f);
+	FVector TileOffset = FVector::ZeroVector;
+
+	if (SelectedTile->InstancedMesh)
+	{
+		TileScale = SelectedTile->InstancedMesh->GetRelativeScale3D();
+		TileOffset = SelectedTile->InstancedMesh->GetRelativeLocation();
+	}
+
+	FVector PreviewLocation = GridLocation + GridOffset + TileOffset + FVector(0.0f, 0.0f, 5.0f);
+
+	SelectedTilePreview->SetWorldLocation(PreviewLocation);
+	SelectedTilePreview->SetWorldRotation(FRotator(0.0f, CurrentYaw, 0.0f));
+	SelectedTilePreview->SetWorldScale3D(TileScale);
+	SelectedTilePreview->SetVisibility(true);
+}
+
+void ATileGameManager::CycleTile(int32 Direction)
 {
 	if (TileTypes.Num() == 0)
 	{
 		return;
 	}
 
-	CurrentTileIndex++;
+	CurrentTileIndex += Direction;
 
 	if (CurrentTileIndex >= TileTypes.Num())
 	{
 		CurrentTileIndex = 0;
 	}
 
+	if (CurrentTileIndex < 0)
+	{
+		CurrentTileIndex = TileTypes.Num() - 1;
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("Current Tile Index: %d"), CurrentTileIndex);
+}
+
+void ATileGameManager::RotateSelectedTile()
+{
+	CurrentYaw += 90.0f;
+
+	if (CurrentYaw >= 360.0f)
+	{
+		CurrentYaw = 0.0f;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Current Rotation Yaw: %f"), CurrentYaw);
 }
 
 bool ATileGameManager::ConvertWorldToGridIndex(const FVector& GridLocation, int32& OutGridX, int32& OutGridY) const
@@ -195,4 +295,3 @@ bool ATileGameManager::ConvertWorldToGridIndex(const FVector& GridLocation, int3
 
 	return true;
 }
-

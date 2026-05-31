@@ -43,12 +43,21 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid")
 	UStaticMeshComponent* GridSelection;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid")
+	UStaticMeshComponent* SelectedTilePreview;
+
 protected:
 	UPROPERTY(VisibleAnywhere)
 	USceneComponent* SceneRoot;
 
 	bool GridOccupied[MAX_GRID_SIZE][MAX_GRID_SIZE];
 
-	void CycleTileForward();
+	float CurrentYaw;
+
+	FVector LastGridLocation;
+
+	void UpdateSelectedTilePreview(const FVector& GridLocation);
+	void CycleTile(int32 Direction);
+	void RotateSelectedTile();
 	bool ConvertWorldToGridIndex(const FVector& GridLocation, int32& OutGridX, int32& OutGridY) const;
 };
