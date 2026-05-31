@@ -6,21 +6,49 @@
 #include "GameFramework/Actor.h"
 #include "TileGameManager.generated.h"
 
+#define MAX_GRID_SIZE 100
+
+class ATileBase;
+class UStaticMeshComponent;
+class USceneComponent;
+
 UCLASS()
 class HOMEWORK3_API ATileGameManager : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
+
+public:
 	ATileGameManager();
 
-protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	void OnActorInteraction(AActor* HitActor, FVector Location, bool bPressed);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
+	int32 GridSize;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
+	FVector GridOffset;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
+	int32 MapExtendsInGrids;
+
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Tiles")
+	TArray<ATileBase*> TileTypes;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tiles")
+	int32 CurrentTileIndex;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid")
+	UStaticMeshComponent* GridSelection;
+
+protected:
+	UPROPERTY(VisibleAnywhere)
+	USceneComponent* SceneRoot;
+
+	bool GridOccupied[MAX_GRID_SIZE][MAX_GRID_SIZE];
+
+	void CycleTileForward();
+	bool ConvertWorldToGridIndex(const FVector& GridLocation, int32& OutGridX, int32& OutGridY) const;
 };

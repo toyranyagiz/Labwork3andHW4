@@ -6,21 +6,33 @@
 #include "GameFramework/Actor.h"
 #include "TileBase.generated.h"
 
+class UInstancedStaticMeshComponent;
+class UMaterialInterface;
+class UStaticMesh;
+class USceneComponent;
+
 UCLASS()
 class HOMEWORK3_API ATileBase : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
+
+public:
 	ATileBase();
 
-protected:
-	// Called when the game starts or when spawned
+	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tile")
+	UStaticMesh* BaseMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tile")
+	UMaterialInterface* BaseMaterial;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tile")
+	UInstancedStaticMeshComponent* InstancedMesh;
+
+protected:
+	UPROPERTY(VisibleAnywhere, Category = "Tile")
+	USceneComponent* SceneRoot;
 };
