@@ -161,11 +161,13 @@ void ATileGameManager::OnActorInteraction(AActor* HitActor, FVector Location, bo
 			return;
 		}
 
-		FVector TileScale = SelectedTile->InstancedMesh->GetRelativeScale3D();
-		FVector TileOffset = SelectedTile->InstancedMesh->GetRelativeLocation();
+		FRotator TileRotation = FRotator(0.0f, CurrentYaw, 0.0f);
+
+		FVector TileScale = SelectedTile->PlacementScale;
+		FVector TileOffset = TileRotation.RotateVector(SelectedTile->PlacementOffset);
 
 		FTransform TileTransform(
-			FRotator(0.0f, CurrentYaw, 0.0f),
+			TileRotation,
 			GridLocation + TileOffset,
 			TileScale
 		);
@@ -220,19 +222,15 @@ void ATileGameManager::UpdateSelectedTilePreview(const FVector& GridLocation)
 		SelectedTilePreview->SetMaterial(0, SelectedTile->BaseMaterial);
 	}
 
-	FVector TileScale = FVector(1.0f, 1.0f, 1.0f);
-	FVector TileOffset = FVector::ZeroVector;
+	FRotator TileRotation = FRotator(0.0f, CurrentYaw, 0.0f);
 
-	if (SelectedTile->InstancedMesh)
-	{
-		TileScale = SelectedTile->InstancedMesh->GetRelativeScale3D();
-		TileOffset = SelectedTile->InstancedMesh->GetRelativeLocation();
-	}
+	FVector TileScale = SelectedTile->PlacementScale;
+	FVector TileOffset = TileRotation.RotateVector(SelectedTile->PlacementOffset);
 
 	FVector PreviewLocation = GridLocation + GridOffset + TileOffset + FVector(0.0f, 0.0f, 5.0f);
 
 	SelectedTilePreview->SetWorldLocation(PreviewLocation);
-	SelectedTilePreview->SetWorldRotation(FRotator(0.0f, CurrentYaw, 0.0f));
+	SelectedTilePreview->SetWorldRotation(TileRotation);
 	SelectedTilePreview->SetWorldScale3D(TileScale);
 	SelectedTilePreview->SetVisibility(true);
 }

@@ -29,6 +29,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tile")
 	UMaterialInterface* BaseMaterial;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tile Placement")
+	FVector PlacementScale;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tile Placement")
+	FVector PlacementOffset;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tile")
 	UInstancedStaticMeshComponent* InstancedMesh;
 

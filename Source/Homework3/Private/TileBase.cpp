@@ -10,6 +10,9 @@ ATileBase::ATileBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
+	PlacementScale = FVector(1.0f, 1.0f, 1.0f);
+	PlacementOffset = FVector(0.0f, 0.0f, 0.0f);
+
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = SceneRoot;
 
